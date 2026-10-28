@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Announcements — PCTE ClubHub</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div class="bg-animated"></div>
+<div class="app-layout" id="appLayout"></div>
+
+<!-- Create Announcement Modal -->
+<div class="modal-overlay" id="createAnnModal">
+  <div class="modal" style="max-width:540px">
+    <div class="modal-header">
+      <div class="modal-title">📢 New Announcement</div>
+      <button class="modal-close" onclick="closeModal('createAnnModal')">✕</button>
+    </div>
+    <div class="form-group">
+      <label>Title</label>
+      <input type="text" class="form-control" placeholder="Announcement title..." />
+    </div>
+    <div class="form-group">
+      <label>Club</label>
+      <select class="form-control" id="annClubSel">
+        <option>Admin (All Clubs)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Priority</label>
+      <select class="form-control">
+        <option>📌 Normal</option>
+        <option>🚨 Important</option>
+        <option>ℹ️ Info</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Message</label>
+      <textarea class="form-control" rows="5" placeholder="Write your announcement here..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('createAnnModal')">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="closeModal('createAnnModal');showToast('Announcement published!','success')">📢 Publish</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+<script src="app.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const layout = document.getElementById('appLayout');
+  const role = sessionStorage.getItem('userRole') || 'student';
+  let activeFilter = 'all';
+
+  const extraAnn = [
+    { id:6, title:'Adventure Club — All India Trekking Conference', text:'PCTE Adventure Club will be representing the institute at the All India Trekking Conference in Delhi on October 18. Registration for accompanying students is now open.', clubName:'Adventure Club', emoji:'🏔️', time:'5 days ago', color:'rgba(249,115,22,0.1)', important:false },
+    { id:7, title:'Chess Club — State Level Tournament', text:'PCTE Chess Club has qualified for the State Level Chess Championship 2025. Congratulations to all team members. The tournament will be held at PAU, Ludhiana.', clubName:'Chess Club', emoji:'♟️', time:'1 week ago', color:'rgba(100,116,139,0.1)', important:false },
+  ];
+
+  const allAnn = [...ANNOUNCEMENTS, ...extraAnn];
+
+  function render() {
+    const filtered = allAnn.filter(a => {
+      if (activeFilter === 'important') return a.important;
+      if (activeFilter === 'admin') return a.clubName === 'Admin';
+      return true;
+    });
+
+    layout.innerHTML = `
+      ${renderSidebar('announcements')}
+      <div class="main-content">
+        ${renderTopbar('Announcements', 'Stay updated with club notices and events')}
+        <div class="page-content">
+
+          <!-- HEADER -->
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:24px">
+            <div class="filter-bar" style="margin-bottom:0">
+              <button class="filter-btn ${activeFilter==='all'?'active':''}" onclick="filterAnn('all')">All (${allAnn.length})</button>
+              <button class="filter-btn ${activeFilter==='important'?'active':''}" onclick="filterAnn('important')">🚨 Important (${allAnn.filter(a=>a.important).length})</button>
+              <button class="filter-btn ${activeFilter==='admin'?'active':''}" onclick="filterAnn('admin')">🔐 Admin Notices</button>
+            </div>
+            ${(role==='coordinator'||role==='admin') ? `
+            <button class="btn btn-primary btn-sm" onclick="openModal('createAnnModal')">📢 New Announcement</button>` : ''}
+          </div>
+
+          <!-- ANNOUNCEMENTS -->
+          <div style="display:flex;flex-direction:column;gap:16px">
+            ${filtered.map(a=>`
+            <div class="announcement-card animate-fade-up" style="background:${a.color};border-color:${a.important?'rgba(239,68,68,0.3)':'var(--glass-border)'}">
+              <div class="ann-icon" style="background:${a.color};min-width:44px;min-height:44px">${a.emoji}</div>
+              <div style="flex:1">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+                  <div class="ann-title">
+                    ${a.important ? '<span style="background:rgba(239,68,68,0.2);color:#ef4444;font-size:11px;padding:2px 8px;border-radius:999px;margin-right:8px">🚨 IMPORTANT</span>' : ''}
+                    ${a.title}
+                  </div>
+                  <span class="status-badge" style="background:rgba(255,255,255,0.05);color:var(--text-muted);border-color:var(--glass-border);white-space:nowrap">${a.clubName}</span>
+                </div>
+                <div class="ann-text" style="margin-top:8px">${a.text}</div>
+                <div class="ann-meta">
+                  <span>📅 ${a.time}</span>
+                  <button onclick="this.parentElement.parentElement.querySelector('.ann-full').classList.toggle('hidden')" style="background:none;border:none;color:var(--primary);font-size:12px;cursor:pointer;padding:0;text-decoration:underline">Read more</button>
+                </div>
+              </div>
+            </div>`).join('')}
+          </div>
+
+          <!-- NOTIFICATION SETTINGS -->
+          <div class="card" style="margin-top:28px">
+            <div class="card-header"><div class="card-title">🔔 Notification Preferences</div></div>
+            <div class="card-body">
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px">
+                ${[
+                  {label:'Club Announcements', checked:true},
+                  {label:'Event Reminders', checked:true},
+                  {label:'Membership Updates', checked:true},
+                  {label:'Certificate Ready', checked:true},
+                  {label:'Admin Notices', checked:true},
+                  {label:'Weekly Digest', checked:false},
+                ].map(n=>`
+                <label style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--glass);border:1px solid var(--glass-border);border-radius:12px;cursor:pointer;">
+                  <input type="checkbox" ${n.checked?'checked':''} style="accent-color:var(--primary);width:16px;height:16px" />
+                  <span style="font-size:14px">${n.label}</span>
+                </label>`).join('')}
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>`;
+
+    // Populate club select
+    const sel = document.getElementById('annClubSel');
+    if (sel) CLUBS.forEach(c=>{ const o=document.createElement('option'); o.textContent=c.name; sel.appendChild(o); });
+  }
+
+  window.filterAnn = function(f) { activeFilter = f; render(); };
+  render();
+});
+</script>
+</body>
+</html>

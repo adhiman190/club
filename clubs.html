@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clubs — PCTE ClubHub</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div class="bg-animated"></div>
+<div class="app-layout" id="appLayout"></div>
+
+<!-- Club Detail Modal -->
+<div class="modal-overlay" id="clubDetailModal">
+  <div class="modal" style="max-width:600px" id="clubDetailContent">
+    <div class="modal-header">
+      <div class="modal-title" id="mdTitle">Club Details</div>
+      <button class="modal-close" onclick="closeModal('clubDetailModal')">✕</button>
+    </div>
+    <div id="mdBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('clubDetailModal')">Close</button>
+      <button class="btn btn-primary btn-sm" id="mdJoinBtn">Join Club</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+<script src="app.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const layout = document.getElementById('appLayout');
+  let activeCategory = 'All';
+  let searchQ = '';
+
+  function renderClubsPage() {
+    const categories = ['All', 'Sports', 'Cultural', 'Academic', 'Social', 'Arts', 'Wellness', 'Media', 'Adventure'];
+    const joinedIds = [1, 7, 16]; // demo joined clubs
+    const filtered = CLUBS.filter(c => {
+      const catMatch = activeCategory === 'All' || c.category === activeCategory;
+      const searchMatch = !searchQ || c.name.toLowerCase().includes(searchQ.toLowerCase()) || c.category.toLowerCase().includes(searchQ.toLowerCase());
+      return catMatch && searchMatch;
+    });
+
+    layout.innerHTML = `
+      ${renderSidebar('clubs')}
+      <div class="main-content">
+        ${renderTopbar('Clubs', 'PCTE Group of Institutes — All 17 Clubs')}
+        <div class="page-content">
+
+          <!-- HEADER STATS -->
+          <div class="stats-grid mb-24" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+            <div class="stat-card" style="--stat-color:#6c63ff;padding:16px">
+              <div class="stat-icon" style="width:36px;height:36px;margin-bottom:10px;font-size:16px">🏛️</div>
+              <div class="stat-value" style="font-size:24px">17</div>
+              <div class="stat-label">Total Clubs</div>
+            </div>
+            <div class="stat-card" style="--stat-color:#10b981;padding:16px">
+              <div class="stat-icon" style="width:36px;height:36px;margin-bottom:10px;font-size:16px">⚽</div>
+              <div class="stat-value" style="font-size:24px">7</div>
+              <div class="stat-label">Sports</div>
+            </div>
+            <div class="stat-card" style="--stat-color:#f59e0b;padding:16px">
+              <div class="stat-icon" style="width:36px;height:36px;margin-bottom:10px;font-size:16px">💃</div>
+              <div class="stat-value" style="font-size:24px">4</div>
+              <div class="stat-label">Cultural</div>
+            </div>
+            <div class="stat-card" style="--stat-color:#3b82f6;padding:16px">
+              <div class="stat-icon" style="width:36px;height:36px;margin-bottom:10px;font-size:16px">📚</div>
+              <div class="stat-value" style="font-size:24px">5</div>
+              <div class="stat-label">Other</div>
+            </div>
+            <div class="stat-card" style="--stat-color:#ec4899;padding:16px">
+              <div class="stat-icon" style="width:36px;height:36px;margin-bottom:10px;font-size:16px">👥</div>
+              <div class="stat-value" style="font-size:24px">682</div>
+              <div class="stat-label">Members</div>
+            </div>
+          </div>
+
+          <!-- SEARCH + FILTER -->
+          <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:24px;align-items:center">
+            <div class="search-bar" style="display:flex;min-width:280px">
+              <span>🔍</span>
+              <input type="text" placeholder="Search clubs by name or category..." id="clubSearch" value="${searchQ}" oninput="handleSearch(this.value)" />
+            </div>
+            <div class="filter-bar" style="margin-bottom:0;flex:1">
+              ${categories.map(cat=>`
+              <button class="filter-btn ${activeCategory===cat?'active':''}" onclick="filterCategory('${cat}')">${cat}</button>`).join('')}
+            </div>
+          </div>
+
+          <!-- CLUBS GRID -->
+          ${filtered.length ? `
+          <div style="margin-bottom:12px;color:var(--text-muted);font-size:13px">Showing ${filtered.length} club${filtered.length!==1?'s':''}</div>
+          <div class="grid-auto">
+            ${filtered.map(club => clubCardHTML(club, joinedIds.includes(club.id))).join('')}
+          </div>` : `
+          <div class="empty-state">
+            <div class="empty-icon">🔍</div>
+            <h3>No clubs found</h3>
+            <p>Try a different category or search term</p>
+          </div>`}
+
+        </div>
+      </div>`;
+  }
+
+  window.filterCategory = function(cat) { activeCategory = cat; renderClubsPage(); };
+  window.handleSearch = function(q) { searchQ = q; renderClubsPage(); };
+
+  window.joinClub = function(id, name) {
+    showToast(`Membership request sent for ${name}! Awaiting approval.`, 'success');
+  };
+
+  window.viewClub = function(id) {
+    const club = CLUBS.find(c=>c.id===id);
+    if (!club) return;
+    const clubEvents = EVENTS.filter(e=>e.clubId===club.id);
+    document.getElementById('mdTitle').textContent = club.emoji + ' ' + club.name;
+    document.getElementById('mdJoinBtn').onclick = ()=>{joinClub(club.id,club.name);closeModal('clubDetailModal');};
+    document.getElementById('mdBody').innerHTML = `
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;padding:20px;background:linear-gradient(135deg,${club.color}22,${club.color}11);border-radius:14px;">
+        <div style="font-size:64px">${club.emoji}</div>
+        <div>
+          <h3 style="font-family:'Outfit',sans-serif;font-size:22px;font-weight:800">${club.name}</h3>
+          <p style="color:var(--text-secondary);margin-top:4px">${club.desc}</p>
+          <div style="display:flex;gap:12px;margin-top:10px;flex-wrap:wrap">
+            <span class="club-tag">${club.category}</span>
+            <span class="club-tag" style="background:rgba(16,185,129,0.1);color:#10b981;border-color:rgba(16,185,129,0.2);">📍 ${club.room}</span>
+            <span class="club-tag" style="background:rgba(245,158,11,0.1);color:#f59e0b;border-color:rgba(245,158,11,0.2);">Est. ${club.founded}</span>
+          </div>
+        </div>
+      </div>
+      <div class="grid-3" style="margin-bottom:20px;gap:12px">
+        <div style="text-align:center;padding:16px;background:var(--glass);border:1px solid var(--glass-border);border-radius:12px">
+          <div style="font-size:24px;font-weight:800">${club.members}</div>
+          <div style="font-size:12px;color:var(--text-muted)">Members</div>
+        </div>
+        <div style="text-align:center;padding:16px;background:var(--glass);border:1px solid var(--glass-border);border-radius:12px">
+          <div style="font-size:24px;font-weight:800">${club.events}</div>
+          <div style="font-size:12px;color:var(--text-muted)">Events Held</div>
+        </div>
+        <div style="text-align:center;padding:16px;background:var(--glass);border:1px solid var(--glass-border);border-radius:12px">
+          <div style="font-size:24px;font-weight:800">${clubEvents.filter(e=>e.status!=='completed').length}</div>
+          <div style="font-size:12px;color:var(--text-muted)">Upcoming</div>
+        </div>
+      </div>
+      <div style="margin-bottom:16px">
+        <div style="font-size:12px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">Faculty Coordinator</div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--glass);border-radius:10px">
+          <div class="avatar" style="background:linear-gradient(135deg,${club.color},transparent)">👨‍🏫</div>
+          <div><div style="font-weight:600">${club.coordinator}</div><div style="font-size:12px;color:var(--text-muted)">Faculty Coordinator · PCTE</div></div>
+        </div>
+      </div>
+      ${clubEvents.length ? `
+      <div>
+        <div style="font-size:12px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">Upcoming Events</div>
+        ${clubEvents.map(ev=>`
+        <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--glass);border-radius:10px;margin-bottom:8px">
+          <div style="font-size:20px">📅</div>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:14px">${ev.name}</div>
+            <div style="font-size:12px;color:var(--text-muted)">${new Date(ev.date).toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'})} · ${ev.venue}</div>
+          </div>
+          <span class="status-badge status-${ev.status}">${ev.status}</span>
+        </div>`).join('')}
+      </div>` : ''}`;
+    openModal('clubDetailModal');
+  };
+
+  renderClubsPage();
+});
+</script>
+</body>
+</html>

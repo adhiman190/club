@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Events — PCTE ClubHub</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div class="bg-animated"></div>
+<div class="app-layout" id="appLayout"></div>
+
+<!-- Event Detail Modal -->
+<div class="modal-overlay" id="eventModal">
+  <div class="modal" style="max-width:580px">
+    <div class="modal-header">
+      <div class="modal-title" id="emTitle">Event Details</div>
+      <button class="modal-close" onclick="closeModal('eventModal')">✕</button>
+    </div>
+    <div id="emBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('eventModal')">Close</button>
+      <button class="btn btn-primary btn-sm" id="emRegBtn">Register Now</button>
+    </div>
+  </div>
+</div>
+
+<!-- QR Attendance Modal -->
+<div class="modal-overlay" id="qrModal">
+  <div class="modal" style="max-width:380px;text-align:center">
+    <div class="modal-header">
+      <div class="modal-title">📱 Event QR Check-in</div>
+      <button class="modal-close" onclick="closeModal('qrModal')">✕</button>
+    </div>
+    <div class="qr-display" style="background:#ffffff;padding:16px;border-radius:20px;display:inline-block;box-shadow:0 10px 25px rgba(0,0,0,0.5);margin-bottom:16px;position:relative;">
+      <div id="qrcodeCanvas" style="display:flex;justify-content:center;align-items:center;min-width:180px;min-height:180px;"></div>
+      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:42px;height:42px;background:white;border-radius:10px;padding:3px;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;">
+        <img src="pcte-logo.jpg" style="width:100%;height:100%;object-fit:contain;border-radius:6px;" />
+      </div>
+    </div>
+    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:4px">Scan using mobile camera or scanner app to verify attendance</p>
+    <p id="qrEventName" style="font-weight:700;font-size:15px;margin-bottom:16px;color:var(--primary)"></p>
+    <button class="btn btn-primary w-full" onclick="closeModal('qrModal');showToast('Attendance marked successfully!','success')">✅ Mark Attendance Now</button>
+  </div>
+</div>
+
+<!-- Create Event Modal (for Coordinator/Admin) -->
+<div class="modal-overlay" id="createEventModal">
+  <div class="modal" style="max-width:540px">
+    <div class="modal-header">
+      <div class="modal-title">➕ Create New Event</div>
+      <button class="modal-close" onclick="closeModal('createEventModal')">✕</button>
+    </div>
+    <div class="form-group">
+      <label>Event Name</label>
+      <input type="text" class="form-control" placeholder="e.g. Annual Dance Competition 2025" />
+    </div>
+    <div class="grid-2" style="gap:12px">
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" class="form-control" />
+      </div>
+      <div class="form-group">
+        <label>Time</label>
+        <input type="time" class="form-control" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Venue</label>
+      <input type="text" class="form-control" placeholder="e.g. Main Auditorium" />
+    </div>
+    <div class="form-group">
+      <label>Club</label>
+      <select class="form-control">
+        ${CLUBS ? '' : ''}
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Max Participants</label>
+      <input type="number" class="form-control" placeholder="100" />
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <textarea class="form-control" placeholder="Event description..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('createEventModal')">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="closeModal('createEventModal');showToast('Event created successfully!','success')">Create Event</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="app.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  let activeTab = 'all';
+  const layout = document.getElementById('appLayout');
+  const role = sessionStorage.getItem('userRole') || 'student';
+  let qrCodeInstance = null;
+
+  function render() {
+    const tabs = [
+      {key:'all',label:'All Events'},
+      {key:'open',label:'Open Registration'},
+      {key:'upcoming',label:'Upcoming'},
+      {key:'completed',label:'Completed'},
+    ];
+    const filtered = EVENTS.filter(e => activeTab==='all' || e.status===activeTab);
+
+    layout.innerHTML = `
+      ${renderSidebar('events')}
+      <div class="main-content">
+        ${renderTopbar('Events', 'Browse and register for club events')}
+        <div class="page-content">
+
+          <!-- STATS -->
+          <div class="stats-grid mb-24" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+            <div class="stat-card" style="--stat-color:#6c63ff;padding:16px">
+              <div class="stat-value" style="font-size:28px">${EVENTS.length}</div>
+              <div class="stat-label">Total Events</div>
+            </div>
+            <div class="stat-card" style="--stat-color:#10b981;padding:16px">
+              <div class="stat-value" style="font-size:28px">${EVENTS.filter(e=>e.status==='open').length}</div>
+              <div class="stat-label">Open Now</div>
+            </div>
+            <div class="stat-card" style="--stat-color:#f59e0b;padding:16px">
+              <div class="stat-value" style="font-size:28px">${EVENTS.filter(e=>e.status==='upcoming').length}</div>
+              <div class="stat-label">Upcoming</div>
+            </div>
+            <div class="stat-card" style="--stat-color:#3b82f6;padding:16px">
+              <div class="stat-value" style="font-size:28px">${EVENTS.filter(e=>e.status==='completed').length}</div>
+              <div class="stat-label">Completed</div>
+            </div>
+          </div>
+
+          <!-- ACTIONS BAR -->
+          <div style="display:flex;gap:16px;align-items:center;margin-bottom:24px;flex-wrap:wrap">
+            <div class="tabs" style="margin-bottom:0">
+              ${tabs.map(t=>`<button class="tab-btn ${activeTab===t.key?'active':''}" onclick="switchTab('${t.key}')">${t.label} <span style="opacity:0.6">(${EVENTS.filter(e=>t.key==='all'||e.status===t.key).length})</span></button>`).join('')}
+            </div>
+            ${(role==='coordinator'||role==='admin') ? `
+            <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="openModal('createEventModal')">
+              ➕ Create Event
+            </button>` : ''}
+          </div>
+
+          <!-- EVENTS LIST -->
+          <div style="display:flex;flex-direction:column;gap:16px">
+            ${filtered.map(ev=>{
+              const club = CLUBS.find(c=>c.id===ev.clubId);
+              const pct = Math.round(ev.participants/ev.maxParticipants*100);
+              return `
+              <div class="event-card animate-fade-up">
+                <div style="display:flex;gap:16px;flex-wrap:wrap">
+                  <div class="event-date-badge">
+                    <div class="day">${new Date(ev.date).getDate()}</div>
+                    <div class="month">${new Date(ev.date).toLocaleString('default',{month:'short'}).toUpperCase()}</div>
+                  </div>
+                  <div class="event-info" style="flex:1;min-width:200px">
+                    <div class="event-name">${ev.name}</div>
+                    <div class="event-meta">
+                      <span>🏛️ ${club?club.name:''}</span>
+                      <span>🕐 ${ev.time}</span>
+                      <span>📍 ${ev.venue}</span>
+                      <span>👥 ${ev.participants}/${ev.maxParticipants} registered</span>
+                    </div>
+                    <div style="margin-top:10px;max-width:400px">
+                      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:4px">
+                        <span>Registration</span><span>${pct}%</span>
+                      </div>
+                      <div class="progress"><div class="progress-bar" style="width:${pct}%;background:${pct>80?'#ef4444':pct>50?'#f59e0b':'#6c63ff'}"></div></div>
+                    </div>
+                  </div>
+                  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:10px;justify-content:space-between">
+                    <span class="status-badge status-${ev.status}">${ev.status}</span>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap">
+                      <button class="btn btn-sm btn-outline" onclick="viewEvent(${ev.id})">Details</button>
+                      ${ev.status==='open' ? (ev.registered ?
+                        `<button class="btn btn-sm btn-success" onclick="openQR('${ev.name}', ${ev.id})">📱 QR Check-in</button>` :
+                        `<button class="btn btn-sm btn-primary" onclick="registerEvent(${ev.id},'${ev.name}')">Register</button>`
+                      ) : ev.status==='completed' ?
+                        `<button class="btn btn-sm btn-info" onclick="openQR('${ev.name}', ${ev.id})">View QR</button>` :
+                        `<button class="btn btn-sm btn-outline" disabled>Soon</button>`}
+                    </div>
+                  </div>
+                </div>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>
+      </div>`;
+
+    // Repopulate club select in create modal
+    const sel = document.querySelector('#createEventModal select');
+    if (sel) sel.innerHTML = CLUBS.map(c=>`<option>${c.name}</option>`).join('');
+  }
+
+  window.switchTab = function(tab) { activeTab = tab; render(); };
+
+  window.viewEvent = function(id) {
+    const ev = EVENTS.find(e=>e.id===id);
+    if (!ev) return;
+    const club = CLUBS.find(c=>c.id===ev.clubId);
+    document.getElementById('emTitle').textContent = ev.name;
+    document.getElementById('emRegBtn').onclick = ()=>{ registerEvent(ev.id,ev.name); closeModal('eventModal'); };
+    document.getElementById('emRegBtn').disabled = ev.status!=='open' || ev.registered;
+    document.getElementById('emRegBtn').textContent = ev.registered ? '✅ Already Registered' : 'Register Now';
+    document.getElementById('emBody').innerHTML = `
+      <div style="padding:16px;background:linear-gradient(135deg,rgba(108,99,255,0.1),rgba(16,185,129,0.05));border-radius:14px;margin-bottom:20px">
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px">Organized by</div>
+        <div style="font-size:18px;font-weight:700">${club?club.emoji+' '+club.name:''}</div>
+      </div>
+      <div class="grid-2" style="gap:12px;margin-bottom:20px">
+        <div style="padding:14px;background:var(--glass);border:1px solid var(--glass-border);border-radius:12px">
+          <div style="font-size:12px;color:var(--text-muted)">Date & Time</div>
+          <div style="font-weight:700;margin-top:4px">📅 ${new Date(ev.date).toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>
+          <div style="font-size:13px;color:var(--text-secondary)">🕐 ${ev.time}</div>
+        </div>
+        <div style="padding:14px;background:var(--glass);border:1px solid var(--glass-border);border-radius:12px">
+          <div style="font-size:12px;color:var(--text-muted)">Venue</div>
+          <div style="font-weight:700;margin-top:4px">📍 ${ev.venue}</div>
+          <div style="font-size:13px;color:var(--text-secondary)">PCTE Campus, Ludhiana</div>
+        </div>
+      </div>
+      <div style="padding:14px;background:var(--glass);border:1px solid var(--glass-border);border-radius:12px;margin-bottom:16px">
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Registrations</div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px">
+          <span>Registered: <strong>${ev.participants}</strong></span>
+          <span>Capacity: <strong>${ev.maxParticipants}</strong></span>
+          <span>Available: <strong style="color:${ev.maxParticipants-ev.participants<10?'#ef4444':'#10b981'}">${ev.maxParticipants-ev.participants}</strong></span>
+        </div>
+        <div class="progress"><div class="progress-bar" style="width:${Math.round(ev.participants/ev.maxParticipants*100)}%"></div></div>
+      </div>
+      <div style="padding:14px;background:var(--glass);border:1px solid var(--glass-border);border-radius:12px">
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">Description</div>
+        <p style="font-size:14px;line-height:1.7;color:var(--text-secondary)">${ev.desc}</p>
+      </div>`;
+    openModal('eventModal');
+  };
+
+  window.openQR = function(name, id) {
+    document.getElementById('qrEventName').textContent = name;
+    const qrContainer = document.getElementById('qrcodeCanvas');
+    if (qrContainer) {
+      qrContainer.innerHTML = '';
+      const checkinUrl = `https://pcte.edu.in/attendance?event=${encodeURIComponent(name)}&id=${id || 1}&timestamp=${Date.now()}`;
+      if (typeof QRCode !== 'undefined') {
+        new QRCode(qrContainer, {
+          text: checkinUrl,
+          width: 180,
+          height: 180,
+          colorDark : "#0a0a1a",
+          colorLight : "#ffffff",
+          correctLevel : QRCode.CorrectLevel.H
+        });
+      } else {
+        qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(checkinUrl)}" style="width:180px;height:180px;" alt="QR Code" />`;
+      }
+    }
+    openModal('qrModal');
+  };
+
+  window.registerEvent = function(id, name) {
+    showToast(`✅ Successfully registered for "${name}"!`, 'success');
+    render();
+  };
+
+  render();
+});
+</script>
+</body>
+</html>

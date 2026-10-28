@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Certificates — PCTE ClubHub</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div class="bg-animated"></div>
+<div class="app-layout" id="appLayout"></div>
+
+<!-- Certificate Preview Modal -->
+<div class="modal-overlay" id="certModal">
+  <div class="modal" style="max-width:700px">
+    <div class="modal-header">
+      <div class="modal-title">🏆 Certificate Preview</div>
+      <button class="modal-close" onclick="closeModal('certModal')">✕</button>
+    </div>
+    <div class="cert-template" id="certPreviewContent">
+      <div class="cert-logo">🏛️</div>
+      <div class="cert-institute">PCTE Group of Institutes · Ludhiana, Punjab</div>
+      <div class="cert-heading">Certificate of Participation</div>
+      <div class="cert-sub">This is to certify that</div>
+      <div class="cert-student" id="cpName">Arjun Sharma</div>
+      <div class="cert-event-name" id="cpEventLine">has successfully participated in <strong id="cpEvent">Blood Donation Camp</strong></div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:24px">organized by <strong id="cpClub">CSR Club</strong> · PCTE Group of Institutes</div>
+      <div style="font-size:13px;color:var(--secondary);margin-bottom:24px">Date: <strong id="cpDate">September 10, 2025</strong></div>
+      <div class="cert-footer-line"></div>
+      <div class="cert-signatures">
+        <div class="cert-sig"><strong>Dr. M. Jain</strong>Club Coordinator</div>
+        <div class="cert-sig"><strong>Prof. R. Kumar</strong>Dean Student Affairs</div>
+        <div class="cert-sig"><strong>Dr. H. Singh</strong>Director, PCTE</div>
+      </div>
+      <div style="margin-top:16px;font-size:10px;color:var(--text-muted)" id="cpCertId">Certificate ID: PCTE-CERT-2025-001</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('certModal')">Close</button>
+      <button class="btn btn-primary btn-sm" onclick="downloadCert()">⬇️ Download PDF</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+<script src="app.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const layout = document.getElementById('appLayout');
+  const userName = sessionStorage.getItem('userName') || 'Arjun Sharma';
+
+  layout.innerHTML = `
+    ${renderSidebar('certificates')}
+    <div class="main-content">
+      ${renderTopbar('Certificates', 'Download your participation certificates')}
+      <div class="page-content">
+
+        <!-- STATS -->
+        <div class="stats-grid mb-28" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+          <div class="stat-card" style="--stat-color:#f59e0b;padding:16px">
+            <div class="stat-icon" style="width:36px;height:36px;margin-bottom:10px;">🏆</div>
+            <div class="stat-value" style="font-size:28px">2</div>
+            <div class="stat-label">Certificates Earned</div>
+          </div>
+          <div class="stat-card" style="--stat-color:#10b981;padding:16px">
+            <div class="stat-icon" style="width:36px;height:36px;margin-bottom:10px;">📅</div>
+            <div class="stat-value" style="font-size:28px">3</div>
+            <div class="stat-label">Events Attended</div>
+          </div>
+          <div class="stat-card" style="--stat-color:#6c63ff;padding:16px">
+            <div class="stat-icon" style="width:36px;height:36px;margin-bottom:10px;">🏛️</div>
+            <div class="stat-value" style="font-size:28px">3</div>
+            <div class="stat-label">Clubs Joined</div>
+          </div>
+          <div class="stat-card" style="--stat-color:#3b82f6;padding:16px">
+            <div class="stat-icon" style="width:36px;height:36px;margin-bottom:10px;">⭐</div>
+            <div class="stat-value" style="font-size:28px">85%</div>
+            <div class="stat-label">Attendance Rate</div>
+          </div>
+        </div>
+
+        <!-- CERTIFICATES GRID -->
+        <h2 style="font-family:'Outfit',sans-serif;font-size:18px;font-weight:700;margin-bottom:20px">Your Certificates</h2>
+        <div class="grid-auto mb-28">
+          ${CERTIFICATES.map(cert=>`
+          <div class="cert-card animate-fade-up">
+            <div class="cert-preview">
+              <div style="position:relative;z-index:1;text-align:center">
+                <div style="font-size:48px;margin-bottom:8px">🏆</div>
+                <div style="font-size:10px;color:var(--secondary);letter-spacing:0.1em;text-transform:uppercase">Certificate of Participation</div>
+              </div>
+              <div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(108,99,255,0.05),rgba(245,158,11,0.05))"></div>
+              <div style="position:absolute;top:10px;right:10px;font-size:10px;color:var(--text-muted);background:rgba(0,0,0,0.4);padding:4px 8px;border-radius:6px">${cert.id_no}</div>
+            </div>
+            <div class="cert-body">
+              <div class="cert-name">${cert.event}</div>
+              <div class="cert-event" style="margin-top:4px">👤 ${cert.student}</div>
+              <div class="cert-event">🏛️ ${cert.club}</div>
+              <div class="cert-date">📅 ${new Date(cert.date).toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'})}</div>
+              <div style="display:flex;gap:8px;margin-top:16px">
+                <button class="btn btn-sm btn-primary" style="flex:1" onclick="previewCert(${cert.id})">👁️ Preview</button>
+                <button class="btn btn-sm btn-success" onclick="downloadCertById(${cert.id})">⬇️ PDF</button>
+              </div>
+            </div>
+          </div>`).join('')}
+
+          <!-- LOCKED CERTIFICATE -->
+          <div class="cert-card" style="opacity:0.5">
+            <div class="cert-preview" style="background:rgba(255,255,255,0.02)">
+              <div style="text-align:center;z-index:1;position:relative">
+                <div style="font-size:48px;margin-bottom:8px;filter:grayscale(1)">🏆</div>
+                <div style="font-size:10px;color:var(--text-muted);letter-spacing:0.1em">🔒 NOT YET AVAILABLE</div>
+              </div>
+            </div>
+            <div class="cert-body">
+              <div class="cert-name">Table Tennis Championship</div>
+              <div class="cert-event">Earn by attending the event</div>
+              <div class="cert-date">📅 September 15, 2025 (Upcoming)</div>
+              <div style="margin-top:16px">
+                <button class="btn btn-sm btn-outline w-full" disabled>🔒 Not Yet Available</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CERTIFICATE ID VERIFY -->
+        <div class="card">
+          <div class="card-header"><div class="card-title">🔍 Verify a Certificate</div></div>
+          <div class="card-body">
+            <p style="color:var(--text-secondary);font-size:14px;margin-bottom:16px">Enter a certificate ID to verify its authenticity</p>
+            <div style="display:flex;gap:12px;flex-wrap:wrap">
+              <input type="text" class="form-control" placeholder="e.g. PCTE-CERT-2025-001" style="flex:1;min-width:200px" id="verifyInput" />
+              <button class="btn btn-primary" onclick="verifyCert()">Verify</button>
+            </div>
+            <div id="verifyResult"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>`;
+
+  window.previewCert = function(id) {
+    const cert = CERTIFICATES.find(c=>c.id===id);
+    if (!cert) return;
+    document.getElementById('cpName').textContent = cert.student;
+    document.getElementById('cpEvent').textContent = cert.event;
+    document.getElementById('cpClub').textContent = cert.club;
+    document.getElementById('cpDate').textContent = new Date(cert.date).toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
+    document.getElementById('cpCertId').textContent = 'Certificate ID: ' + cert.id_no;
+    openModal('certModal');
+  };
+
+  window.downloadCert = function() {
+    closeModal('certModal');
+    showToast('Certificate PDF download started!', 'success');
+  };
+
+  window.downloadCertById = function(id) {
+    showToast('Certificate PDF download started!', 'success');
+  };
+
+  window.verifyCert = function() {
+    const val = document.getElementById('verifyInput').value.trim().toUpperCase();
+    const found = CERTIFICATES.find(c=>c.id_no === val);
+    const el = document.getElementById('verifyResult');
+    if (found) {
+      el.innerHTML = `<div style="margin-top:16px;padding:16px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:12px">
+        <div style="color:#10b981;font-weight:700;margin-bottom:8px">✅ Certificate Verified!</div>
+        <div style="font-size:13px;color:var(--text-secondary)">Issued to: <strong>${found.student}</strong><br>Event: <strong>${found.event}</strong><br>Club: <strong>${found.club}</strong></div>
+      </div>`;
+    } else {
+      el.innerHTML = `<div style="margin-top:16px;padding:16px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:12px">
+        <div style="color:#ef4444;font-weight:700;">❌ Certificate Not Found</div>
+        <div style="font-size:13px;color:var(--text-secondary);margin-top:4px">Please check the ID and try again.</div>
+      </div>`;
+    }
+  };
+});
+</script>
+</body>
+</html>

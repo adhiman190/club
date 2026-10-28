@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reports — PCTE ClubHub</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <div class="bg-animated"></div>
+  <div class="app-layout" id="appLayout"></div>
+  <div class="toast-container" id="toastContainer"></div>
+  <script src="app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const layout = document.getElementById('appLayout');
+      let activeReport = 'overview';
+
+      function render() {
+        const tabs = [
+          { key: 'overview', label: '📊 Overview' },
+          { key: 'clubs', label: '🏛️ Club-wise' },
+          { key: 'events', label: '📅 Event-wise' },
+          { key: 'attendance', label: '✅ Attendance' },
+        ];
+
+        layout.innerHTML = `
+      ${renderSidebar('reports')}
+      <div class="main-content">
+        ${renderTopbar('Reports', 'Analytics and performance reports')}
+        <div class="page-content">
+
+          <!-- TABS + EXPORT -->
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:24px">
+            <div class="tabs" style="margin-bottom:0">
+              ${tabs.map(t => `<button class="tab-btn ${activeReport === t.key ? 'active' : ''}" onclick="switchReport('${t.key}')">${t.label}</button>`).join('')}
+            </div>
+            <div style="display:flex;gap:10px">
+              <select class="form-control btn-sm" style="width:auto;background:var(--glass);border:1px solid var(--glass-border)">
+                <option>AY 2026-27</option><option>AY 2025-26</option>
+              </select>
+              <button class="btn btn-outline btn-sm" onclick="showToast('Exporting report as PDF...','info')">⬇️ Export PDF</button>
+              <button class="btn btn-outline btn-sm" onclick="showToast('Exporting as Excel...','info')">📊 Export Excel</button>
+            </div>
+          </div>
+
+          <!-- REPORT CONTENT -->
+          <div id="reportContent">${getReportHTML()}</div>
+
+        </div>
+      </div>`;
+
+        setTimeout(initCharts, 100);
+      }
+
+      function getReportHTML() {
+        if (activeReport === 'overview') return overviewHTML();
+        if (activeReport === 'clubs') return clubsReportHTML();
+        if (activeReport === 'events') return eventsReportHTML();
+        if (activeReport === 'attendance') return attendanceHTML();
+        return '';
+      }
+
+      function overviewHTML() {
+        return `
+    <!-- KEY METRICS -->
+    <div class="grid-4 mb-28" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+      ${[
+            { label: 'Total Clubs', value: '17', icon: '🏛️', color: '#6c63ff', change: '+2 this year' },
+            { label: 'Total Members', value: '682', icon: '👥', color: '#10b981', change: '+48 this month' },
+            { label: 'Events Held', value: '124', icon: '📅', color: '#f59e0b', change: '+14 vs last sem' },
+            { label: 'Attendance Rate', value: '78%', icon: '✅', color: '#3b82f6', change: '↗ +5% vs last sem' },
+          ].map(m => `
+      <div class="stat-card" style="--stat-color:${m.color};padding:20px">
+        <div class="stat-icon" style="width:40px;height:40px;margin-bottom:12px;font-size:18px">${m.icon}</div>
+        <div class="stat-value" style="font-size:30px">${m.value}</div>
+        <div class="stat-label">${m.label}</div>
+        <div class="stat-change up" style="margin-top:6px;font-size:11px">${m.change}</div>
+      </div>`).join('')}
+    </div>
+
+    <!-- CHARTS ROW -->
+    <div class="grid-2 mb-24" style="gap:20px">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Members per Club</div></div>
+        <div class="card-body">
+          <div id="membersChart" style="height:260px;overflow-x:auto"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Events per Club</div></div>
+        <div class="card-body">
+          <div id="eventsChart" style="height:260px;overflow-x:auto"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOP CLUBS -->
+    <div class="card mb-24">
+      <div class="card-header"><div class="card-title">🏆 Top Performing Clubs</div></div>
+      <div class="card-body" style="padding:0">
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Rank</th><th>Club</th><th>Members</th><th>Events</th><th>Attendance %</th><th>Score</th></tr></thead>
+            <tbody>
+              ${[...CLUBS].sort((a, b) => b.members - a.members).slice(0, 8).map((c, i) => {
+            const score = Math.round((c.members * 0.5 + c.events * 3));
+            const att = Math.floor(Math.random() * 30) + 65;
+            return `<tr>
+                  <td><span style="font-size:18px">${['🥇', '🥈', '🥉'][i] || ('#' + (i + 1))}</span></td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <span style="font-size:20px">${c.emoji}</span>
+                      <strong>${c.name}</strong>
+                    </div>
+                  </td>
+                  <td><strong>${c.members}</strong></td>
+                  <td>${c.events}</td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <div class="progress" style="width:60px"><div class="progress-bar" style="width:${att}%;background:${att > 75 ? '#10b981' : att > 60 ? '#f59e0b' : '#ef4444'}"></div></div>
+                      <span style="font-size:13px">${att}%</span>
+                    </div>
+                  </td>
+                  <td><span style="font-weight:700;color:var(--primary)">${score}</span></td>
+                </tr>`;
+          }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+      }
+
+      function clubsReportHTML() {
+        return `
+    <div class="grid-auto">
+      ${CLUBS.map(c => {
+          const att = Math.floor(Math.random() * 30) + 65;
+          const events = EVENTS.filter(e => e.clubId === c.id).length;
+          return `
+        <div class="card animate-fade-up">
+          <div class="card-header" style="padding:16px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font-size:24px">${c.emoji}</span>
+              <div>
+                <div class="card-title" style="font-size:14px">${c.name}</div>
+                <div style="font-size:11px;color:var(--text-muted)">${c.category}</div>
+              </div>
+            </div>
+            <span class="status-badge status-active">Active</span>
+          </div>
+          <div class="card-body" style="padding:16px">
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;text-align:center">
+              <div style="padding:10px;background:var(--glass);border-radius:10px">
+                <div style="font-size:20px;font-weight:800">${c.members}</div>
+                <div style="font-size:10px;color:var(--text-muted)">Members</div>
+              </div>
+              <div style="padding:10px;background:var(--glass);border-radius:10px">
+                <div style="font-size:20px;font-weight:800">${c.events}</div>
+                <div style="font-size:10px;color:var(--text-muted)">Events</div>
+              </div>
+              <div style="padding:10px;background:var(--glass);border-radius:10px">
+                <div style="font-size:20px;font-weight:800">${att}%</div>
+                <div style="font-size:10px;color:var(--text-muted)">Attendance</div>
+              </div>
+            </div>
+            <div style="margin-bottom:8px">
+              <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:4px"><span>Member capacity</span><span>${c.members}/100</span></div>
+              <div class="progress"><div class="progress-bar" style="width:${c.members}%;background:${c.color}"></div></div>
+            </div>
+            <div style="font-size:12px;color:var(--text-muted)">🧑‍💼 ${c.coordinator}</div>
+          </div>
+        </div>`;
+        }).join('')}
+    </div>`;
+      }
+
+      function eventsReportHTML() {
+        return `
+    <div class="card">
+      <div class="card-header"><div class="card-title">📅 All Events Report</div></div>
+      <div class="card-body" style="padding:0">
+        <div class="table-wrapper">
+          <table>
+            <thead><tr>
+              <th>Event</th><th>Club</th><th>Date</th><th>Venue</th><th>Registered</th><th>Capacity</th><th>Fill Rate</th><th>Status</th>
+            </tr></thead>
+            <tbody>
+              ${EVENTS.concat([
+          { id: 9, clubId: 3, name: 'Yoga & Mental Wellness Workshop', date: '2025-09-08', time: '8:00 AM', venue: 'ET-103', status: 'completed', participants: 45, maxParticipants: 60, registered: false },
+          { id: 10, clubId: 6, name: 'Street Play — Social Awareness', date: '2025-09-12', time: '4:00 PM', venue: 'Campus Lawn', status: 'completed', participants: 32, maxParticipants: 50, registered: false },
+        ]).map(ev => {
+          const club = CLUBS.find(c => c.id === ev.clubId);
+          const fill = Math.round(ev.participants / ev.maxParticipants * 100);
+          return `<tr>
+                  <td><div style="font-weight:600;font-size:13px">${ev.name}</div></td>
+                  <td><span class="club-tag">${club ? club.emoji + ' ' + club.name.replace(' Club', '') : ''}</span></td>
+                  <td style="font-size:13px;color:var(--text-secondary)">${new Date(ev.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+                  <td style="font-size:13px;color:var(--text-muted)">${ev.venue}</td>
+                  <td style="font-weight:700">${ev.participants}</td>
+                  <td style="color:var(--text-muted)">${ev.maxParticipants}</td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <div class="progress" style="width:60px"><div class="progress-bar" style="width:${fill}%;background:${fill > 80 ? '#ef4444' : fill > 50 ? '#f59e0b' : '#10b981'}"></div></div>
+                      <span style="font-size:12px">${fill}%</span>
+                    </div>
+                  </td>
+                  <td><span class="status-badge status-${ev.status}">${ev.status}</span></td>
+                </tr>`;
+        }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+      }
+
+      function attendanceHTML() {
+        return `
+    <!-- ATTENDANCE STATS -->
+    <div class="stats-grid mb-24" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+      ${[
+            { label: 'Avg Attendance', value: '78%', icon: '📊', color: '#6c63ff' },
+            { label: 'Perfect Attendance', value: '42', icon: '⭐', color: '#f59e0b' },
+            { label: 'Below 60%', value: '18', icon: '⚠️', color: '#ef4444' },
+            { label: 'Events Tracked', value: '124', icon: '✅', color: '#10b981' },
+          ].map(m => `<div class="stat-card" style="--stat-color:${m.color};padding:16px">
+        <div class="stat-value" style="font-size:28px">${m.value}</div>
+        <div class="stat-label">${m.icon} ${m.label}</div>
+      </div>`).join('')}
+    </div>
+
+    <!-- MARK ATTENDANCE -->
+    <div class="card mb-24">
+      <div class="card-header">
+        <div class="card-title">✅ Mark Attendance</div>
+        <select class="form-control btn-sm" style="width:auto;background:var(--glass);border:1px solid var(--glass-border)" id="eventSelect">
+          ${EVENTS.filter(e => e.status === 'open' || e.status === 'completed').map(ev => `<option value="${ev.id}">${ev.name}</option>`).join('')}
+        </select>
+      </div>
+      <div class="card-body">
+        <div style="margin-bottom:16px;display:flex;gap:8px">
+          <button class="btn btn-sm btn-success" onclick="markAll(true)">✅ Mark All Present</button>
+          <button class="btn btn-sm btn-danger" onclick="markAll(false)">✕ Mark All Absent</button>
+        </div>
+        <div id="attendanceList">
+          ${MEMBERS.map((m, i) => `
+          <div class="attendance-row">
+            <div class="att-checkbox ${i < 4 ? 'checked' : ''}" id="att${m.id}" onclick="toggleAtt(${m.id})"></div>
+            <div class="avatar" style="background:linear-gradient(135deg,var(--primary),var(--primary-dark));font-size:16px">${m.avatar}</div>
+            <div style="flex:1">
+              <div style="font-weight:600">${m.name}</div>
+              <div style="font-size:12px;color:var(--text-muted)">${m.roll} · ${m.dept}</div>
+            </div>
+            <span class="${i < 4 ? 'status-badge status-approved' : 'status-badge status-rejected'}" id="attStatus${m.id}">${i < 4 ? 'Present' : 'Absent'}</span>
+          </div>`).join('')}
+        </div>
+        <div style="margin-top:16px;text-align:right">
+          <button class="btn btn-primary" onclick="saveAttendance()">💾 Save Attendance</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- STUDENT-WISE REPORT -->
+    <div class="card">
+      <div class="card-header"><div class="card-title">👥 Student Participation Report</div></div>
+      <div class="card-body" style="padding:0">
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Student</th><th>Department</th><th>Clubs</th><th>Events Attended</th><th>Attendance %</th><th>Certificates</th></tr></thead>
+            <tbody>
+              ${MEMBERS.map(m => {
+            const attended = Math.floor(Math.random() * 10) + 2;
+            const total = 12;
+            const att = Math.round(attended / total * 100);
+            const certs = Math.floor(attended / 4);
+            return `<tr>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <div class="avatar" style="background:linear-gradient(135deg,var(--primary),var(--primary-dark));font-size:18px">${m.avatar}</div>
+                      <div><div style="font-weight:600">${m.name}</div><div style="font-size:11px;color:var(--text-muted)">${m.roll}</div></div>
+                    </div>
+                  </td>
+                  <td style="color:var(--text-secondary)">${m.dept}</td>
+                  <td>
+                    <div class="avatar-group">
+                      ${m.clubs.slice(0, 3).map(c => `<div class="avatar" style="width:28px;height:28px;font-size:12px;background:linear-gradient(135deg,var(--primary),var(--primary-dark))">${CLUBS.find(cl => cl.name === c)?.emoji || '🏛️'}</div>`).join('')}
+                    </div>
+                  </td>
+                  <td style="font-weight:700">${attended}/${total}</td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <div class="progress" style="width:70px"><div class="progress-bar" style="width:${att}%;background:${att >= 75 ? '#10b981' : att >= 60 ? '#f59e0b' : '#ef4444'}"></div></div>
+                      <span style="font-size:13px;color:${att >= 75 ? '#10b981' : att >= 60 ? '#f59e0b' : '#ef4444'};font-weight:700">${att}%</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:6px">
+                      🏆 <strong>${certs}</strong>
+                    </div>
+                  </td>
+                </tr>`;
+          }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+      }
+
+      function initCharts() {
+        const mc = document.getElementById('membersChart');
+        if (mc) renderBarChart(mc, CLUBS.map(c => c.members), CLUBS.map(c => c.name.replace(' Club', '').slice(0, 7)));
+        const ec = document.getElementById('eventsChart');
+        if (ec) renderBarChart(ec, CLUBS.map(c => c.events), CLUBS.map(c => c.name.replace(' Club', '').slice(0, 7)));
+      }
+
+      window.switchReport = function (tab) { activeReport = tab; render(); };
+
+      window.toggleAtt = function (id) {
+        const el = document.getElementById('att' + id);
+        const st = document.getElementById('attStatus' + id);
+        if (!el) return;
+        el.classList.toggle('checked');
+        const isPresent = el.classList.contains('checked');
+        if (st) { st.className = `status-badge status-${isPresent ? 'approved' : 'rejected'}`; st.textContent = isPresent ? 'Present' : 'Absent'; }
+      };
+
+      window.markAll = function (present) {
+        MEMBERS.forEach(m => {
+          const el = document.getElementById('att' + m.id);
+          const st = document.getElementById('attStatus' + m.id);
+          if (el) { el.classList[present ? 'add' : 'remove']('checked'); }
+          if (st) { st.className = `status-badge status-${present ? 'approved' : 'rejected'}`; st.textContent = present ? 'Present' : 'Absent'; }
+        });
+      };
+
+      window.saveAttendance = function () { showToast('Attendance saved successfully!', 'success'); };
+
+      render();
+    });
+  </script>
+</body>
+
+</html>

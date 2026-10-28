@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — PCTE ClubHub</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div class="bg-animated"></div>
+<div class="app-layout" id="appLayout"></div>
+<div class="toast-container" id="toastContainer"></div>
+<script src="app.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const layout = document.getElementById('appLayout');
+  const role = sessionStorage.getItem('userRole') || 'student';    layout.innerHTML = `
+      ${renderSidebar('dashboard')}
+      <div class="main-content">
+        ${renderTopbar(
+          role === 'admin' ? '⚙️ Admin Operations Dashboard' : role === 'coordinator' ? '🎯 Coordinator Hub' : '🎓 Student Portal',
+          role === 'admin' ? 'Campus-wide governance, approvals, and institute analytics' : role === 'coordinator' ? 'Manage your assigned club, events, and member applications' : 'Welcome back to PCTE ClubHub'
+        )}
+        <div class="page-content">
+
+          <!-- ROLE BADGE BANNER -->
+          <div style="background:${role==='admin'?'linear-gradient(135deg,rgba(239,68,68,0.15),rgba(245,158,11,0.08))':role==='coordinator'?'linear-gradient(135deg,rgba(245,158,11,0.15),rgba(16,185,129,0.08))':'linear-gradient(135deg,rgba(108,99,255,0.15),rgba(59,130,246,0.08))'};border:1px solid ${role==='admin'?'rgba(239,68,68,0.3)':role==='coordinator'?'rgba(245,158,11,0.3)':'rgba(108,99,255,0.3)'};border-radius:16px;padding:20px 24px;margin-bottom:28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+            <div style="display:flex;align-items:center;gap:16px;">
+              <div style="font-size:36px;width:56px;height:56px;border-radius:14px;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;">
+                ${role==='admin'?'🔐':role==='coordinator'?'🧑‍💼':'🎓'}
+              </div>
+              <div>
+                <h2 style="font-size:20px;font-weight:700;margin-bottom:4px;font-family:'Outfit',sans-serif;">
+                  ${role==='admin'?'Administrator Console':role==='coordinator'?'Club Coordinator Control Panel':'Student Experience Dashboard'}
+                </h2>
+                <p style="font-size:13px;color:var(--text-secondary);">
+                  ${role==='admin'?'Logged in with full system management privileges across all 17 PCTE Clubs':role==='coordinator'?'Assigned Club: Table Tennis & Sports Committee Coordinator':`Registered Student ID: 2K22/CS/045 · CSE Dept`}
+                </p>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;">
+              ${role==='admin'?`
+                <a href="reports.html" class="btn btn-sm btn-danger">📊 Audit System Reports</a>
+                <a href="events.html" class="btn btn-sm btn-outline">⚙️ Manage All Events</a>
+              `:role==='coordinator'?`
+                <a href="events.html" class="btn btn-sm btn-warning">➕ Create New Event</a>
+                <a href="membership.html" class="btn btn-sm btn-outline">📥 Member Requests (3)</a>
+              `:`
+                <a href="clubs.html" class="btn btn-sm btn-primary">🔍 Explore Clubs</a>
+                <a href="certificates.html" class="btn btn-sm btn-outline">🏆 My Certificates</a>
+              `}
+            </div>
+          </div>
+
+          <!-- ROLE SPECIFIC STATS -->
+          <div class="stats-grid mb-28">
+            ${role==='admin'?`
+              <div class="stat-card animate-fade-up" style="--stat-color:#ef4444">
+                <div class="stat-icon">🏛️</div>
+                <div class="stat-value">17</div>
+                <div class="stat-label">Active Clubs</div>
+                <div class="stat-change up">↗ 100% Operational</div>
+              </div>
+              <div class="stat-card animate-fade-up" style="--stat-color:#f59e0b;animation-delay:0.1s">
+                <div class="stat-icon">⏳</div>
+                <div class="stat-value">12</div>
+                <div class="stat-label">Pending Approvals</div>
+                <div class="stat-change down">Needs Review</div>
+              </div>
+              <div class="stat-card animate-fade-up" style="--stat-color:#10b981;animation-delay:0.2s">
+                <div class="stat-icon">👥</div>
+                <div class="stat-value">682</div>
+                <div class="stat-label">Total Registered Students</div>
+                <div class="stat-change up">↗ +48 this month</div>
+              </div>
+              <div class="stat-card animate-fade-up" style="--stat-color:#3b82f6;animation-delay:0.3s">
+                <div class="stat-icon">💰</div>
+                <div class="stat-value">₹1.4L</div>
+                <div class="stat-label">Allocated Club Funds</div>
+                <div class="stat-change up">AY 2026-27</div>
+              </div>
+            `:role==='coordinator'?`
+              <div class="stat-card animate-fade-up" style="--stat-color:#f59e0b">
+                <div class="stat-icon">🏓</div>
+                <div class="stat-value">42</div>
+                <div class="stat-label">Table Tennis Members</div>
+                <div class="stat-change up">↗ 3 new pending</div>
+              </div>
+              <div class="stat-card animate-fade-up" style="--stat-color:#10b981;animation-delay:0.1s">
+                <div class="stat-icon">📅</div>
+                <div class="stat-value">8</div>
+                <div class="stat-label">Organized Events</div>
+                <div class="stat-change up">2 Open for Reg</div>
+              </div>
+              <div class="stat-card animate-fade-up" style="--stat-color:#6c63ff;animation-delay:0.2s">
+                <div class="stat-icon">🎯</div>
+                <div class="stat-value">84%</div>
+                <div class="stat-label">Avg Event Attendance</div>
+                <div class="stat-change up">↗ +6% vs last sem</div>
+              </div>
+              <div class="stat-card animate-fade-up" style="--stat-color:#ec4899;animation-delay:0.3s">
+                <div class="stat-icon">🏆</div>
+                <div class="stat-value">28</div>
+                <div class="stat-label">Certificates Issued</div>
+                <div class="stat-change up">Ready for distribution</div>
+              </div>
+            `:`
+              <div class="stat-card animate-fade-up" style="--stat-color:#6c63ff">
+                <div class="stat-icon">🎫</div>
+                <div class="stat-value">2</div>
+                <div class="stat-label">My Club Memberships</div>
+                <div class="stat-change up">Dance & Cricket</div>
+              </div>
+              <div class="stat-card animate-fade-up" style="--stat-color:#10b981;animation-delay:0.1s">
+                <div class="stat-icon">📅</div>
+                <div class="stat-value">4</div>
+                <div class="stat-label">Registered Events</div>
+                <div class="stat-change up">Next: Sept 15</div>
+              </div>
+              <div class="stat-card animate-fade-up" style="--stat-color:#f59e0b;animation-delay:0.2s">
+                <div class="stat-icon">🏆</div>
+                <div class="stat-value">2</div>
+                <div class="stat-label">Certificates Earned</div>
+                <div class="stat-change up">Verified</div>
+              </div>
+              <div class="stat-card animate-fade-up" style="--stat-color:#3b82f6;animation-delay:0.3s">
+                <div class="stat-icon">⚡</div>
+                <div class="stat-value">88%</div>
+                <div class="stat-label">My Attendance Rate</div>
+                <div class="stat-change up">Top 10% active</div>
+              </div>
+            `}
+          </div>
+
+          <!-- ROLE SPECIFIC ACTION PANELS -->
+          ${role==='admin'?`
+          <div class="card mb-28" style="border:1px solid rgba(239,68,68,0.2);">
+            <div class="card-header" style="background:rgba(239,68,68,0.06);">
+              <div class="card-title">🚨 System Action Center (Admin Priority)</div>
+              <span class="status-badge status-closed">Requires Attention</span>
+            </div>
+            <div class="card-body">
+              <div class="grid-3" style="gap:16px;">
+                <div style="padding:16px;background:var(--glass);border:1px solid var(--glass-border);border-radius:12px;">
+                  <div style="font-weight:700;font-size:14px;margin-bottom:6px;">📋 Club Renewal Requests</div>
+                  <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">3 clubs awaiting annual budget & room re-allocation approval.</p>
+                  <button class="btn btn-sm btn-outline w-full" onclick="showToast('Opened Renewal Queue','info')">Review Renewals</button>
+                </div>
+                <div style="padding:16px;background:var(--glass);border:1px solid var(--glass-border);border-radius:12px;">
+                  <div style="font-weight:700;font-size:14px;margin-bottom:6px;">🧑‍💼 Coordinator Appointments</div>
+                  <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">2 new faculty coordinator nominations pending confirmation.</p>
+                  <button class="btn btn-sm btn-outline w-full" onclick="showToast('Opened Nominations Queue','info')">Approve Faculty</button>
+                </div>
+                <div style="padding:16px;background:var(--glass);border:1px solid var(--glass-border);border-radius:12px;">
+                  <div style="font-weight:700;font-size:14px;margin-bottom:6px;">📜 Certificate Sign-offs</div>
+                  <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">120 certificates pending digital signature seal for Blood Donation Camp.</p>
+                  <a href="certificates.html" class="btn btn-sm btn-danger w-full">Sign Certificates</a>
+                </div>
+              </div>
+            </div>
+          </div>
+          `:role==='coordinator'?`
+          <div class="card mb-28" style="border:1px solid rgba(245,158,11,0.2);">
+            <div class="card-header" style="background:rgba(245,158,11,0.06);">
+              <div class="card-title">🎯 Coordinator Quick Actions & Approvals</div>
+              <span class="status-badge status-upcoming">3 Pending Applications</span>
+            </div>
+            <div class="card-body">
+              <div class="grid-3" style="gap:16px;">
+                <div style="padding:16px;background:var(--glass);border:1px solid var(--glass-border);border-radius:12px;">
+                  <div style="font-weight:700;font-size:14px;margin-bottom:6px;">📥 Member Join Requests</div>
+                  <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">Karan Mehta (Civil), +2 others applied for Table Tennis Club.</p>
+                  <a href="membership.html" class="btn btn-sm btn-warning w-full">Manage Applicants</a>
+                </div>
+                <div style="padding:16px;background:var(--glass);border:1px solid var(--glass-border);border-radius:12px;">
+                  <div style="font-weight:700;font-size:14px;margin-bottom:6px;">📱 Attendance QR Scanner</div>
+                  <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">Generate or scan check-in QR codes for live ongoing events.</p>
+                  <a href="events.html" class="btn btn-sm btn-outline w-full">Open Scanner</a>
+                </div>
+                <div style="padding:16px;background:var(--glass);border:1px solid var(--glass-border);border-radius:12px;">
+                  <div style="font-weight:700;font-size:14px;margin-bottom:6px;">📢 Send Announcement</div>
+                  <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">Broadcast urgent updates to all Table Tennis Club members.</p>
+                  <a href="announcements.html" class="btn btn-sm btn-outline w-full">Post Notice</a>
+                </div>
+              </div>
+            </div>
+          </div>
+          `:''}
+
+        <!-- CHARTS + CALENDAR -->
+        <div class="grid-2 mb-28" style="gap:20px">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">${role==='coordinator'?'Club Performance Metrics':'Club-wise Analytics'}</div>
+              <div class="tabs" style="margin-bottom:0">
+                <button class="tab-btn active" onclick="switchChart(this,'members')">Members</button>
+                <button class="tab-btn" onclick="switchChart(this,'events')">Events</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="chart-container" id="chartContainer"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><div class="card-title">Event Calendar</div></div>
+            <div class="card-body">
+              <div id="calWidget"></div>
+              <div style="margin-top:16px;padding:12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;">
+                <div style="font-size:12px;color:var(--secondary);font-weight:600;margin-bottom:8px;">● Upcoming Events</div>
+                ${EVENTS.filter(e=>e.status!=='completed').slice(0,3).map(e=>`
+                <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+                  <span>${e.name.length>30?e.name.slice(0,30)+'...':e.name}</span>
+                  <span style="color:var(--text-muted)">${new Date(e.date).toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</span>
+                </div>`).join('')}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RECENT EVENTS + CATEGORIES -->
+        <div class="grid-2 mb-28" style="gap:20px">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">${role==='admin'?'Institute-wide Events':role==='coordinator'?'Managed Events List':'My Enrolled Events'}</div>
+              <a href="events.html" class="btn btn-sm btn-outline">View All</a>
+            </div>
+            <div class="card-body" style="padding:0">
+              <div class="table-wrapper">
+                <table>
+                  <thead><tr>
+                    <th>Event</th><th>Date</th><th>Club</th><th>Status</th>
+                  </tr></thead>
+                  <tbody>
+                    ${EVENTS.slice(0,6).map(e=>{
+                      const club = CLUBS.find(c=>c.id===e.clubId);
+                      return `<tr>
+                        <td><div style="font-weight:600;font-size:13px">${e.name.length>25?e.name.slice(0,25)+'...':e.name}</div></td>
+                        <td style="color:var(--text-secondary);font-size:13px">${new Date(e.date).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</td>
+                        <td><span class="club-tag">${club?club.emoji+' '+club.name.replace(' Club',''):''}</span></td>
+                        <td><span class="status-badge status-${e.status}">${e.status}</span></td>
+                      </tr>`;
+                    }).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><div class="card-title">Club Categories</div></div>
+            <div class="card-body">
+              <canvas id="donutCanvas" width="180" height="180"></canvas>
+              <div style="margin-top:16px">
+                ${[
+                  {label:'Sports', value:8, color:'#6c63ff'},
+                  {label:'Cultural', value:4, color:'#f59e0b'},
+                  {label:'Academic', value:2, color:'#3b82f6'},
+                  {label:'Social/CSR', value:1, color:'#10b981'},
+                  {label:'Other', value:2, color:'#ec4899'},
+                ].map(s=>`
+                <div class="legend-item">
+                  <div class="legend-dot" style="background:${s.color}"></div>
+                  <span>${s.label}</span>
+                  <span style="margin-left:auto;color:var(--text-muted)">${s.value}</span>
+                  <div style="width:60px"><div class="progress"><div class="progress-bar" style="width:${s.value/17*100}%;background:${s.color}"></div></div></div>
+                </div>`).join('')}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ANNOUNCEMENTS + ACTIVITY -->
+        <div class="grid-2" style="gap:20px">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">📢 Latest Announcements</div>
+              <a href="announcements.html" class="btn btn-sm btn-outline">See All</a>
+            </div>
+            <div class="card-body" style="padding:0 24px 24px">
+              ${ANNOUNCEMENTS.slice(0,3).map(a=>`
+              <div class="announcement-card" style="background:${a.color};margin-top:16px">
+                <div class="ann-icon" style="background:${a.color}">${a.emoji}</div>
+                <div>
+                  <div class="ann-title">${a.title.length>50?a.title.slice(0,50)+'...':a.title}</div>
+                  <div class="ann-text">${a.text.slice(0,100)}...</div>
+                  <div class="ann-meta"><span>📌 ${a.clubName}</span><span>🕐 ${a.time}</span></div>
+                </div>
+              </div>`).join('')}
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><div class="card-title">🕐 Recent Activity</div></div>
+            <div class="card-body">
+              <div class="timeline">
+                <div class="timeline-item">
+                  <div class="timeline-dot" style="background:#10b981"></div>
+                  <div class="timeline-content">
+                    <div class="timeline-title">${role==='admin'?'🔐 System Backup Completed':role==='coordinator'?'🧑‍💼 Approved 5 New Club Members':'✅ Registered for Table Tennis Championship'}</div>
+                    <div class="timeline-text">${role==='admin'?'Automated database snapshot':role==='coordinator'?'Table Tennis Club Roster updated':'Event on Sep 15 · Sports Complex'}</div>
+                    <div class="timeline-time">Today, 10:32 AM</div>
+                  </div>
+                </div>
+                <div class="timeline-item">
+                  <div class="timeline-dot" style="background:#f59e0b"></div>
+                  <div class="timeline-content">
+                    <div class="timeline-title">${role==='admin'?'🏛️ Added New Club: Events on Air':role==='coordinator'?'➕ Created Event: Inter-College Tournament':'🎫 Joined Events on Air Club'}</div>
+                    <div class="timeline-text">${role==='admin'?'Category: Media · Room ET-410':role==='coordinator'?'Sent for admin budget clearance':'Membership approved by coordinator'}</div>
+                    <div class="timeline-time">Yesterday, 3:15 PM</div>
+                  </div>
+                </div>
+                <div class="timeline-item">
+                  <div class="timeline-dot" style="background:#6c63ff"></div>
+                  <div class="timeline-content">
+                    <div class="timeline-title">${role==='admin'?'📜 Verified 120 Blood Donation Certificates':role==='coordinator'?'📱 Generated Attendance QR for Workshop':'🏆 Certificate Available'}</div>
+                    <div class="timeline-text">${role==='admin'?'Issued to CSR Club participants':role==='coordinator'?'Media Lab ET-410 session':'Blood Donation Camp — CSR Club'}</div>
+                    <div class="timeline-time">Sep 10, 2025</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>`;
+
+  // Calendar
+  updateCalendar();
+
+  // Bar Chart
+  const chartData = {
+    members: [42,68,55,38,72,45,35,28,50,44,60,36,65,22,30,48,40],
+    events:  [8,15,12,10,18,9,14,7,16,13,11,10,20,6,8,22,17]
+  };
+  const allLabels = CLUBS.map(c=>c.name.replace(' Club','').slice(0,8));
+  const chartContainer = document.getElementById('chartContainer');
+
+  window.switchChart = function(btn, type) {
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    renderBarChart(chartContainer, chartData[type], allLabels);
+  };
+  renderBarChart(chartContainer, chartData.members, allLabels);
+
+  // Donut
+  const segs = [
+    {label:'Sports',value:8,color:'#6c63ff'},
+    {label:'Cultural',value:4,color:'#f59e0b'},
+    {label:'Academic',value:2,color:'#3b82f6'},
+    {label:'Social',value:1,color:'#10b981'},
+    {label:'Other',value:2,color:'#ec4899'},
+  ];
+  setTimeout(()=>renderDonut(document.getElementById('donutCanvas'), segs), 100);
+});
+</script>
+</body>
+</html>
